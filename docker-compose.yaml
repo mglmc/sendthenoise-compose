@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sendthenoise-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sendthenoise
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sendthenoise-net
+
+  server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: sendthenoise-server
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sendthenoise
+      POSTGRES_PORT: 5432
+    networks:
+      - sendthenoise-net
+    depends_on:
+      - postgres
+
+  nginx:
+    image: nginx:alpine
+    container_name: sendthenoise-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - sendthenoise-net
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
+
+networks:
+  sendthenoise-net:
