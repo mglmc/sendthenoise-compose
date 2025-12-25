@@ -1,0 +1,6 @@
+volumes:
+  postgres_data:
+  mathesar_data:
+
+networks:
+  sendthenoise-net:

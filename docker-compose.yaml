@@ -1,51 +1,103 @@
+﻿name: services
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: sendthenoise-postgres
-    restart: unless-stopped
+  mathesar:
+    container_name: sendthenoise-mathesar
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: sendthenoise
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - sendthenoise-net
-
-  server:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-    container_name: sendthenoise-server
-    restart: unless-stopped
-    environment:
+      ALLOWED_HOSTS: '*'
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      MATHESAR_DATABASES: (sendthenoise|postgresql://postgres:postgres@postgres:5432/sendthenoise)
+      POSTGRES_DB: mathesar_django
       POSTGRES_HOST: postgres
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: sendthenoise
-      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+      SECRET_KEY: changeme-in-production
+    image: mathesar/mathesar-prod:latest
     networks:
-      - sendthenoise-net
-    depends_on:
-      - postgres
-
-  nginx:
-    image: nginx:alpine
-    container_name: sendthenoise-nginx
-    restart: unless-stopped
+      sendthenoise-net: null
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    networks:
-      - sendthenoise-net
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: unless-stopped
+  nginx:
+    container_name: sendthenoise-nginx
     depends_on:
-      - server
-
-volumes:
-  postgres_data:
-
+      server:
+        condition: service_started
+        required: true
+    image: nginx:alpine
+    networks:
+      sendthenoise-net: null
+    ports:
+      - mode: ingress
+        target: 80
+        published: "80"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: D:\_code\sendthenoise\compose\nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        bind:
+          create_host_path: true
+  postgres:
+    container_name: sendthenoise-postgres
+    environment:
+      POSTGRES_DB: sendthenoise
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres
+      timeout: 5s
+      interval: 5s
+      retries: 5
+    image: postgres:16-alpine
+    networks:
+      sendthenoise-net: null
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: bind
+        source: D:\_code\sendthenoise\compose\init-db.sql
+        target: /docker-entrypoint-initdb.d/init-db.sql
+        read_only: true
+        bind:
+          create_host_path: true
+  server:
+    container_name: sendthenoise-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+    environment:
+      POSTGRES_DB: sendthenoise
+      POSTGRES_HOST: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: postgres
+    image: docker.io/library/sendthenoise:latest
+    networks:
+      sendthenoise-net: null
+    restart: unless-stopped
 networks:
   sendthenoise-net:
+    name: services_sendthenoise-net
+volumes:
+  postgres_data:
+    name: services_postgres_data

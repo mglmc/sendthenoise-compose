@@ -35,10 +35,23 @@ The stack consists of the following services:
    cd compose
    ```
 
-3. **Start the application**:
-   To build and start the services in the background:
+3. **Generate Configuration**:
+   Use `make` to generate the `docker-compose.yaml` file.
+
+   For production/remote images (default):
    ```bash
-   docker compose up -d --build
+   make gen
+   ```
+
+   For local development (builds locally):
+   ```bash
+   make gen-local
+   ```
+
+4. **Start the application**:
+   To start the services in the background:
+   ```bash
+   docker compose up -d
    ```
 
    To stop the services:
