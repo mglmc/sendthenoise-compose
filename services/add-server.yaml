@@ -12,8 +12,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: sendthenoise
       POSTGRES_PORT: 5432
+      SERVER_ADDRESS: :8080
     networks:
       - sendthenoise-net
+    ports:
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,6 +1,6 @@
 param (
-    [Parameter(Mandatory = $true)]
-    [string]$ImageName
+    [switch]$Local,
+    [switch]$Demo
 )
 
 # Add Docker to PATH if not found
@@ -14,7 +14,20 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     }
 }
 
-$env:SERVER_IMAGE_NAME = $ImageName
+# Determine Image Name
+if ($Local) {
+    $repo = "docker.io/library/sendthenoise"
+} else {
+    $repo = "ghcr.io/mglmc/sendthenoise-server"
+}
+
+if ($Demo) {
+    $tag = "demo"
+} else {
+    $tag = "latest"
+}
+
+$env:SERVER_IMAGE_NAME = "$repo`:$tag"
 
 # Run docker compose config and capture output
 $configArgs = @("-f", "services/base.yaml", "-f", "services/add-postgres.yaml", "-f", "services/add-server.yaml", "-f", "services/add-nginx.yaml", "-f", "services/add-mathesar.yaml", "config")

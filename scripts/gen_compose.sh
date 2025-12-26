@@ -1,13 +1,27 @@
 #!/bin/bash
 set -e
 
-IMAGE_NAME=$1
-if [ -z "$IMAGE_NAME" ]; then
-    echo "Error: Image name argument required"
-    exit 1
-fi
+REPO="ghcr.io/mglmc/sendthenoise-server"
+TAG="latest"
 
-export SERVER_IMAGE_NAME=$IMAGE_NAME
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -local)
+            REPO="docker.io/library/sendthenoise"
+            shift
+            ;;
+        -demo)
+            TAG="demo"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+export SERVER_IMAGE_NAME="${REPO}:${TAG}"
 
 # Generate config and remove build section (we only use pre-built images)
 docker compose -f services/base.yaml -f services/add-postgres.yaml -f services/add-server.yaml -f services/add-nginx.yaml -f services/add-mathesar.yaml config | \
